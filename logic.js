@@ -2,7 +2,13 @@
 // In the browser these become globals (load this file before app.js).
 // In Node/Jest they are exported through module.exports at the bottom.
 
-const STATUSES = ["To read", "Reading", "Finished"];
+// Status keys match the <option value="..."> attributes in index.html.
+const STATUSES = ["want-to-read", "currently-reading", "completed"];
+const STATUS_LABELS = {
+  "want-to-read": "To read",
+  "currently-reading": "Reading",
+  completed: "Finished",
+};
 const STORAGE_KEY = "books";
 
 // Returns an object with an error message for each invalid field.
@@ -14,7 +20,7 @@ function validateBook(title, author) {
   return errors;
 }
 
-function createBook(title, author, status = "To read", now = Date.now()) {
+function createBook(title, author, status = "want-to-read", now = Date.now()) {
   return {
     id: `${now}-${Math.random().toString(36).slice(2, 8)}`,
     title: String(title).trim(),
@@ -50,15 +56,20 @@ function deleteBook(books, id) {
 }
 
 function countByStatus(books) {
-  const counts = { "To read": 0, Reading: 0, Finished: 0 };
+  const counts = { "want-to-read": 0, "currently-reading": 0, completed: 0 };
   for (const b of books) {
     if (b.status in counts) counts[b.status] += 1;
   }
   return counts;
 }
 
+// Builds e.g. "3 finished, 2 to read". Statuses with a zero count are left out.
 function formatCounts(counts) {
-  return `${counts.Finished} finished, ${counts.Reading} reading, ${counts["To read"]} to read`;
+  const parts = [];
+  if (counts.completed) parts.push(`${counts.completed} finished`);
+  if (counts["currently-reading"]) parts.push(`${counts["currently-reading"]} reading`);
+  if (counts["want-to-read"]) parts.push(`${counts["want-to-read"]} to read`);
+  return parts.join(", ");
 }
 
 // `storage` is passed in so tests can use a fake instead of the real localStorage.
@@ -80,6 +91,7 @@ function loadBooks(storage = globalThis.localStorage) {
 if (typeof module !== "undefined" && module.exports) {
   module.exports = {
     STATUSES,
+    STATUS_LABELS,
     STORAGE_KEY,
     validateBook,
     createBook,

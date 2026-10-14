@@ -1,5 +1,6 @@
 const {
   STATUSES,
+  STATUS_LABELS,
   STORAGE_KEY,
   validateBook,
   createBook,
@@ -34,15 +35,23 @@ function createFakeStorage(initial = {}) {
 }
 
 const sample = () => [
-  makeBook("Aadujeevitham", "Benyamin", "To read", 1000),
-  makeBook("Ponniyin Selvan", "Kalki", "Reading", 2000),
-  makeBook("Khasakkinte Itihasam", "O. V. Vijayan", "Finished", 3000),
+  makeBook("Aadujeevitham", "Benyamin", "want-to-read", 1000),
+  makeBook("Ponniyin Selvan", "Kalki", "currently-reading", 2000),
+  makeBook("Khasakkinte Itihasam", "O. V. Vijayan", "completed", 3000),
 ];
 
 // ---------- Step 1: status options ----------
 describe("Step 1: statuses", () => {
-  test("T1.2 offers exactly To read, Reading, Finished", () => {
-    expect(STATUSES).toEqual(["To read", "Reading", "Finished"]);
+  test("T1.2 offers exactly three statuses", () => {
+    expect(STATUSES).toEqual(["want-to-read", "currently-reading", "completed"]);
+  });
+
+  test("each status has the label shown on screen", () => {
+    expect(STATUS_LABELS).toEqual({
+      "want-to-read": "To read",
+      "currently-reading": "Reading",
+      completed: "Finished",
+    });
   });
 });
 
@@ -88,23 +97,23 @@ describe("Step 3: validateBook", () => {
 
 describe("Step 3: createBook", () => {
   test("T3.6 builds a book object with trimmed fields", () => {
-    const b = createBook("  Aadujeevitham ", " Benyamin  ", "To read", 5000);
+    const b = createBook("  Aadujeevitham ", " Benyamin  ", "want-to-read", 5000);
     expect(b).toMatchObject({
       title: "Aadujeevitham",
       author: "Benyamin",
-      status: "To read",
+      status: "want-to-read",
       createdAt: 5000,
     });
     expect(typeof b.id).toBe("string");
   });
 
   test("defaults the status to To read", () => {
-    expect(createBook("A", "B").status).toBe("To read");
+    expect(createBook("A", "B").status).toBe("want-to-read");
   });
 
   test("F2 identical books still get different ids", () => {
-    const a = createBook("Same", "Same", "To read", 1);
-    const b = createBook("Same", "Same", "To read", 1);
+    const a = createBook("Same", "Same", "want-to-read", 1);
+    const b = createBook("Same", "Same", "want-to-read", 1);
     expect(a.id).not.toBe(b.id);
   });
 });
@@ -132,7 +141,7 @@ describe("Step 4: sortNewestFirst", () => {
 
   test("F3 50 books come out in strictly descending order", () => {
     const books = Array.from({ length: 50 }, (_, i) =>
-      makeBook(`Book ${i}`, "Author", "To read", i)
+      makeBook(`Book ${i}`, "Author", "want-to-read", i)
     );
     const sorted = sortNewestFirst(books);
     expect(sorted[0].title).toBe("Book 49");
@@ -176,24 +185,24 @@ describe("Step 5: saveBooks / loadBooks", () => {
 // ---------- Step 6: change status ----------
 describe("Step 6: updateStatus", () => {
   test("T6.1 changes Reading to Finished", () => {
-    const books = updateStatus(sample(), "Ponniyin Selvan-2000", "Finished");
+    const books = updateStatus(sample(), "Ponniyin Selvan-2000", "completed");
     expect(books.find((b) => b.title === "Ponniyin Selvan").status).toBe(
-      "Finished"
+      "completed"
     );
   });
 
   test("T6.3 only the chosen book changes and order stays the same", () => {
     const before = sample();
-    const after = updateStatus(before, "Ponniyin Selvan-2000", "Finished");
+    const after = updateStatus(before, "Ponniyin Selvan-2000", "completed");
     expect(after.map((b) => b.title)).toEqual(before.map((b) => b.title));
-    expect(after[0].status).toBe("To read");
-    expect(after[2].status).toBe("Finished");
+    expect(after[0].status).toBe("want-to-read");
+    expect(after[2].status).toBe("completed");
   });
 
   test("does not change the original array", () => {
     const before = sample();
-    updateStatus(before, "Ponniyin Selvan-2000", "Finished");
-    expect(before[1].status).toBe("Reading");
+    updateStatus(before, "Ponniyin Selvan-2000", "completed");
+    expect(before[1].status).toBe("currently-reading");
   });
 
   test("ignores an invalid status", () => {
@@ -204,27 +213,27 @@ describe("Step 6: updateStatus", () => {
 
   test("unknown id changes nothing", () => {
     const before = sample();
-    expect(updateStatus(before, "nope", "Finished")).toEqual(before);
+    expect(updateStatus(before, "nope", "completed")).toEqual(before);
   });
 
   test("T6.2 updated status survives save and load", () => {
     const storage = createFakeStorage();
-    const updated = updateStatus(sample(), "Ponniyin Selvan-2000", "Finished");
+    const updated = updateStatus(sample(), "Ponniyin Selvan-2000", "completed");
     saveBooks(updated, storage);
     const loaded = loadBooks(storage);
     expect(loaded.find((b) => b.title === "Ponniyin Selvan").status).toBe(
-      "Finished"
+      "completed"
     );
   });
 
   test("F2 changing one of two same-titled books leaves the other alone", () => {
     const twins = [
-      makeBook("Same", "Same", "To read", 1),
-      makeBook("Same", "Same", "To read", 2),
+      makeBook("Same", "Same", "want-to-read", 1),
+      makeBook("Same", "Same", "want-to-read", 2),
     ];
-    const after = updateStatus(twins, "Same-1", "Finished");
-    expect(after[0].status).toBe("Finished");
-    expect(after[1].status).toBe("To read");
+    const after = updateStatus(twins, "Same-1", "completed");
+    expect(after[0].status).toBe("completed");
+    expect(after[1].status).toBe("want-to-read");
   });
 });
 
@@ -254,14 +263,14 @@ describe("Step 7: filterBooks", () => {
   });
 
   test("T7.5 filter still works after a status change", () => {
-    const updated = updateStatus(sample(), "Aadujeevitham-1000", "Finished");
+    const updated = updateStatus(sample(), "Aadujeevitham-1000", "completed");
     const result = filterBooks(updated, "ben");
     expect(result).toHaveLength(1);
-    expect(result[0].status).toBe("Finished");
+    expect(result[0].status).toBe("completed");
   });
 
   test("T7.6 a newly added matching book shows up", () => {
-    const books = [...sample(), createBook("Benyamin's Stories", "Someone", "To read", 4000)];
+    const books = [...sample(), createBook("Benyamin's Stories", "Someone", "want-to-read", 4000)];
     expect(filterBooks(books, "ben")).toHaveLength(2);
   });
 
@@ -289,7 +298,7 @@ describe("Step 8: deleteBook", () => {
   });
 
   test("T8.3 deleting the last book leaves an empty list", () => {
-    const one = [makeBook("Only", "One", "To read", 1)];
+    const one = [makeBook("Only", "One", "want-to-read", 1)];
     expect(deleteBook(one, "Only-1")).toEqual([]);
   });
 
@@ -302,35 +311,42 @@ describe("Step 8: deleteBook", () => {
 describe("Step 9: counts", () => {
   test("counts books per status", () => {
     expect(countByStatus(sample())).toEqual({
-      "To read": 1,
-      Reading: 1,
-      Finished: 1,
+      "want-to-read": 1,
+      "currently-reading": 1,
+      completed: 1,
     });
   });
 
   test("T9.1 adding a To read book raises that count by 1", () => {
-    const books = [...sample(), createBook("New", "Author", "To read", 4000)];
-    expect(countByStatus(books)["To read"]).toBe(2);
+    const books = [...sample(), createBook("New", "Author", "want-to-read", 4000)];
+    expect(countByStatus(books)["want-to-read"]).toBe(2);
   });
 
   test("T9.2 changing To read to Finished moves the counts", () => {
-    const updated = updateStatus(sample(), "Aadujeevitham-1000", "Finished");
+    const updated = updateStatus(sample(), "Aadujeevitham-1000", "completed");
     const counts = countByStatus(updated);
-    expect(counts["To read"]).toBe(0);
-    expect(counts.Finished).toBe(2);
+    expect(counts["want-to-read"]).toBe(0);
+    expect(counts.completed).toBe(2);
   });
 
   test("T9.3 deleting a book lowers its count", () => {
     const counts = countByStatus(deleteBook(sample(), "Khasakkinte Itihasam-3000"));
-    expect(counts.Finished).toBe(0);
+    expect(counts.completed).toBe(0);
   });
 
   test("empty list gives all zeros", () => {
-    expect(countByStatus([])).toEqual({ "To read": 0, Reading: 0, Finished: 0 });
+    expect(countByStatus([])).toEqual({ "want-to-read": 0, "currently-reading": 0, completed: 0 });
+  });
+
+  test("formatCounts leaves out statuses with a zero count", () => {
+    expect(formatCounts({ "want-to-read": 2, "currently-reading": 0, completed: 3 })).toBe(
+      "3 finished, 2 to read"
+    );
+    expect(formatCounts({ "want-to-read": 0, "currently-reading": 0, completed: 0 })).toBe("");
   });
 
   test("formatCounts builds the display text", () => {
-    expect(formatCounts({ "To read": 2, Reading: 1, Finished: 3 })).toBe(
+    expect(formatCounts({ "want-to-read": 2, "currently-reading": 1, completed: 3 })).toBe(
       "3 finished, 1 reading, 2 to read"
     );
   });
@@ -344,13 +360,13 @@ describe("End to end: the example from the brief", () => {
     // Add "Aadujeevitham" by Benyamin, To read
     expect(validateBook("Aadujeevitham", "Benyamin")).toEqual({});
     let books = loadBooks(storage);
-    books = [...books, createBook("Aadujeevitham", "Benyamin", "To read", 1000)];
+    books = [...books, createBook("Aadujeevitham", "Benyamin", "want-to-read", 1000)];
     saveBooks(books, storage);
 
-    // It appears at the top with a "To read" label
+    // It appears at the top with a "want-to-read" label
     const top = sortNewestFirst(books)[0];
     expect(top.title).toBe("Aadujeevitham");
-    expect(top.status).toBe("To read");
+    expect(top.status).toBe("want-to-read");
 
     // Add with the title empty shows the message
     expect(validateBook("", "Someone").title).toBe("Please enter a title");
@@ -359,13 +375,13 @@ describe("End to end: the example from the brief", () => {
     expect(filterBooks(books, "ben")).toHaveLength(1);
 
     // Change the status to Finished
-    books = updateStatus(books, top.id, "Finished");
+    books = updateStatus(books, top.id, "completed");
     saveBooks(books, storage);
-    expect(books[0].status).toBe("Finished");
+    expect(books[0].status).toBe("completed");
 
     // "Refresh the page": load again from storage
     const reloaded = loadBooks(storage);
     expect(reloaded).toHaveLength(1);
-    expect(reloaded[0].status).toBe("Finished");
+    expect(reloaded[0].status).toBe("completed");
   });
 });
