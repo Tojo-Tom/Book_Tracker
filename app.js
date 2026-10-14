@@ -2,6 +2,7 @@ let books = [];
 
 const bookList = document.getElementById('book-list');
 const emptyState = document.getElementById('empty-state');
+const searchBox = document.getElementById('search-box');
 
 const form = document.getElementById('book-form');
 const titleInput = document.getElementById('book-title');
@@ -53,7 +54,7 @@ form.addEventListener('submit', function (e) {
 
   // Clear the form and re-render
   form.reset();
-  renderBooks();
+  renderBooks(searchBox.value);
 });
 
 // --- Status label helpers ---
@@ -64,12 +65,24 @@ const STATUS_LABELS = {
 };
 
 /**
- * Renders the full book list sorted by createdAt (newest first).
+ * Renders the book list sorted by createdAt (newest first).
+ * @param {string} [rawQuery=''] - Optional search string; filters by title or author.
  * Uses textContent exclusively — no innerHTML — to prevent XSS.
+ * Never mutates the books[] array.
  */
-function renderBooks() {
+function renderBooks(rawQuery = '') {
+  const query = rawQuery.trim().toLowerCase();
+
   // Sort a shallow copy; never mutate the source array
-  const sorted = books.slice().sort((a, b) => b.createdAt - a.createdAt);
+  let sorted = books.slice().sort((a, b) => b.createdAt - a.createdAt);
+
+  // Filter display-only — books[] is untouched
+  if (query !== '') {
+    sorted = sorted.filter(book =>
+      book.title.toLowerCase().includes(query) ||
+      book.author.toLowerCase().includes(query)
+    );
+  }
 
   // Remove every existing book card (leave the empty-state node in place)
   const existingCards = bookList.querySelectorAll('.book-card');
@@ -111,3 +124,8 @@ function renderBooks() {
     bookList.appendChild(card);
   });
 }
+
+// --- Search: filter display on every keystroke ---
+searchBox.addEventListener('input', function () {
+  renderBooks(this.value);
+});
