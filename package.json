@@ -1,0 +1,13 @@
+{
+  "name": "book-reading-list",
+  "version": "1.0.0",
+  "description": "A simple reading list web app",
+  "scripts": {
+    "test": "jest",
+    "test:watch": "jest --watch",
+    "test:coverage": "jest --coverage"
+  },
+  "devDependencies": {
+    "jest": "^30.5.2"
+  }
+}
